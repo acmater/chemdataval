@@ -1,0 +1,5 @@
+{
+  "devDependencies": {
+    "atom-ide-base": "^1.10.0"
+  }
+}

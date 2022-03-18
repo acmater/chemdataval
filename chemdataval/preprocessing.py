@@ -17,7 +17,7 @@ def pca_process(X, train_index, n_components=50):
     pca_ = PCA(n_components=n_components).fit(X[train_index])
     return pca_.transform(X)
     
-def standardise(X, Y, train_index, return_scaler=False):
+def standardise(X, Y=None, train_index=None, return_scaler=False):
     """
     Performs simple pre-processing using the standard scaler and fitting the the training data alone.
     
@@ -28,14 +28,25 @@ def standardise(X, Y, train_index, return_scaler=False):
     train_idx : np.ndarray(D, dtype=np.int)
         The training indices
     """
-    datascaler = StandardScaler().fit(X[train_index])
-    predsscaler = StandardScaler().fit(Y[train_index].reshape(-1,1))
-
-    X̂ = datascaler.transform(X) 
-    Ŷ = predsscaler.transform(Y.reshape(-1,1))
+    assert len(X) > 0, "X cannot be empty."
     
-    if return_scaler:
-        return X̂, Ŷ, datascaler, predsscaler
+    if train_index is None:
+        train_index = range(len(X))
+        
+    datascaler = StandardScaler().fit(X[train_index])
+    X̂ = datascaler.transform(X) 
+    
+    if Y is not None:
+        predsscaler = StandardScaler().fit(Y[train_index].reshape(-1,1))
+        Ŷ = predsscaler.transform(Y.reshape(-1,1))
+    
+        if return_scaler:
+            return X̂, Ŷ, datascaler, predsscaler
+        else:
+            return X̂, Ŷ
+    
     else:
-        return X̂, Ŷ
-
+        if return_scaler:
+            return X̂, datascaler
+        else:
+            return X̂
