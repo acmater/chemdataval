@@ -6,7 +6,7 @@ import warnings
 import tqdm
 
 
-def test_model(model, X, Y, train_idxs, test_idxs, *args, **kwargs):
+def test_model(X, Y, train_idxs, test_idxs, model=None, *args, **kwargs):
     """
     Generic model testing function
 
@@ -14,6 +14,8 @@ def test_model(model, X, Y, train_idxs, test_idxs, *args, **kwargs):
     Parameters
     ----------
     model : sklearn.MixinRegressor
+
+    X : representations
 
     """
     check_invalid_selection(train_idxs, test_idxs)

@@ -60,7 +60,7 @@ def index_scores(idxs, scores, seed_size, dset_size):
 
 @masked_values
 def informativeness_scoring(
-    idxs, scores, dset_size, seed_size=30, subset_idxs=None, scaler=None,
+    idxs, scores, dset_size, subset_idxs, seed_size=30, scaler=None,
 ):
     """
     Computes the informativeness of each point within an active run.
@@ -80,8 +80,14 @@ def informativeness_scoring(
     dset_size : int, default=266
         The overall size of the dataset
 
-    subset_idxs : np.array[int], default=None
-        The indices of the subset that the provided indices correspond to.
+    subset_idxs : np.array[int]
+        The indices of the subset that the provided indices corresponds to.
+        The reason this must be provided is quite simple. The idxs used in
+        this calculation are not the original, but rather a subset selected
+        by either the inner loop, or cross validation, or something similar.
+        To correctly re-index them, the original indices they corresponded
+        to must be provided. This can be turned off if None is passed, but
+        this is strongly not recommended.
 
     seed_size : int, default=30
         The seed size that was selected, used to remove seed indices from the
@@ -95,7 +101,9 @@ def informativeness_scoring(
     idxs, scores = np.atleast_2d(idxs), np.atleast_2d(scores)
 
     # Re-indexes the indices so that they match the provided subset.
-    if subset_idxs is not None:
+    if subset_idxs is None:
+        pass
+    else:
         idxs = subset_idxs[idxs]
 
     informativeness = np.zeros((scores.shape[0], dset_size))
@@ -110,14 +118,7 @@ def informativeness_scoring(
 
 @masked_values
 def fold_informativeness(
-    rep_results,
-    strategy,
-    runs,
-    dset_size,
-    folds=5,
-    scaler=None,
-    seed_size=30,
-    subset_idxs=None,
+    rep_results, strategy, runs, dset_size, scaler=None, seed_size=30, subset_idxs=None,
 ):
     """
     Wrapper function that computes the informativeness over all folds through
@@ -135,7 +136,8 @@ def fold_informativeness(
 
     for idx in range(folds):
         fold_values = informativeness_scoring(
-            rep_results[f"Fold {idx+1}"][strategy],
+            rep_results[strategy]["idxs"],
+            rep_results[strategy]["scores"],
             seed_size=seed_size,
             scaler=scaler,
             dset_size=dset_size,
@@ -180,7 +182,7 @@ def rep_informativeness(
 
 @masked_values
 def strategy_informativeness(
-    kf_results,
+    results,
     strategies,
     rep,
     runs,
@@ -194,21 +196,20 @@ def strategy_informativeness(
     Wrapper function that computes the informativeness over all sampling
     strategies of the data for a given representation.
     """
-    informativeness = np.zeros((len(strategies) * folds * runs, dset_size))
+    informativeness_aggregate = []
     for idx, strategy in enumerate(strategies.keys()):
-        informativeness[
-            idx * (folds * runs) : idx * (folds * runs) + (folds * runs)
-        ] = fold_informativeness(
-            kf_results[rep],
-            strategy=strategy,
+        result = informativeness_scoring(
+            results[rep][strategy]["idxs"],
+            results[rep][strategy]["scores"],
             seed_size=seed_size,
-            runs=runs,
-            folds=folds,
             scaler=scaler,
             dset_size=dset_size,
             subset_idxs=subset_idxs,
         )
-    return informativeness
+
+        informativeness_aggregate.append(result)
+
+    return np.concatenate(informativeness_aggregate)
 
 
 @masked_values

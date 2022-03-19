@@ -109,10 +109,18 @@ class TestInformativeness(unittest.TestCase):
             np.array([[0, 0, 0, 0, 0.2, 0.3, -0.1], [0.3, 0.2, 0, 0, 0, 0.1, 0]]), 0
         )
         print(
-            (desired, informativeness_scoring(idxs, scores, seed_size=3, dset_size=7),)
+            (
+                desired,
+                informativeness_scoring(
+                    idxs, scores, seed_size=3, dset_size=7, subset_idxs=None
+                ),
+            )
         )
         assert np.ma.allclose(
-            desired, informativeness_scoring(idxs, scores, seed_size=3, dset_size=7)
+            desired,
+            informativeness_scoring(
+                idxs, scores, seed_size=3, dset_size=7, subset_idxs=None
+            ),
         ), "informativeness_scoring is not working correctly."
 
 

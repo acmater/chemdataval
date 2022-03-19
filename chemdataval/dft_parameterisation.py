@@ -5,6 +5,7 @@ Modules contains the functions needed to perform dft parameterisation.
 import numpy as np
 import statsmodels.api as sm
 
+
 def bootstrap(
     data, R=10_000, CI=95, onlyCoefs=True, model="noB88X", bootstrap_off=False
 ):
@@ -124,23 +125,34 @@ def test_coef(df, coef_dct):
 
 
 def test_idx_parameterisation(
+    X,
+    Y,
     train_idxs,
     test_idxs,
-    df,
-    queries=None,
-    seed_size=30,
-    R=100,
+    df=None,
+    R=1,
     metric="RMSD",
     model="noB88X",
     bootstrap_off=False,
+    *args,
+    **kwargs,
 ):
-    if queries is None:
-        queries = train_idxs - seed_size
+    """
+    Tests the BYLP DFT Parameterisation given a set of testing indices and a set of training indices.
+    """
     train_data = df.iloc[train_idxs]
     test_data = df.iloc[test_idxs]
     return test_coef(
-        test_data, bootstrap(train_data, R, model=model, bootstrap_off=bootstrap_off)
-    )
+        test_data,
+        bootstrap(
+            data=train_data,
+            R=R,
+            model=model,
+            bootstrap_off=bootstrap_off,
+            *args,
+            **kwargs,
+        ),
+    )[metric]
 
 
 def test_parameterisation(
