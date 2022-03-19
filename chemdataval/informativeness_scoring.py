@@ -16,17 +16,66 @@ def masked_values(func):
 
 
 @masked_values
+def index_scores(idxs, scores, seed_size, dset_size):
+    """
+    Takes an array of indices, scores, and a seed size, and aligns the changes
+    or differences in scores to the correct indices
+
+    Parameters
+    ----------
+    idxs : np.array(N + seed_size, )
+        The indices of each array. Note that up to seed_size, these are ignored.
+        It is from the start of seed size that they correlate to scores.
+
+    scores : np.array(N)
+        The scores associated with training a model. The i^th value of scores
+        corresponds to a model trained on the first seed_size+(i-1)^th values
+        idxs.
+
+    seed_size : int
+        The seed_size that the first model was trained on. This is important as
+        the seeds are included in the idxs, so this provides the offset to grab
+        the correct values.
+
+    dset_size : int
+        An integer for dataset size. This is used to initalise a blank numpy
+        array that is filled with the appropriate difference values.
+
+    Returns
+    -------
+    MC_shapleys : np.array(dset_size, )
+        The Monte Carlo Shapley estimates for this particular run/permutation
+    """
+    # The -1 below is because the scores include training on just the seed set.
+    assert len(scores) - 1 + seed_size == len(
+        idxs
+    ), "There is a mismatch between the dimensions of scores, indices, and seed size."
+
+    differences = np.diff(scores)
+    MC_shapleys = np.zeros(dset_size,)
+    trained_idxs = idxs[seed_size:]
+    MC_shapleys[trained_idxs] = differences
+    return MC_shapleys
+
+
+@masked_values
 def informativeness_scoring(
-    results, dset_size, seed_size=30, subset_idxs=None, scaler=None,
+    idxs, scores, dset_size, seed_size=30, subset_idxs=None, scaler=None,
 ):
     """
     Computes the informativeness of each point within an active run.
 
     Parameters
     ----------
-    results : {'idxs' : np.array,
-               'scores' : np.array}
-        Results for an individual representation, fold, and sampling strategy.
+    idxs : np.array(M, N + seed_size)
+        The indices of each array. Note that up to seed_size, these are ignored.
+        It is from the start of seed size that they correlate to scores. M
+        is the number of individual runs.
+
+    scores : np.array(M, N)
+        The scores associated with training a model. The i^th value of scores
+        corresponds to a model trained on the first seed_size+(i-1)^th values
+        idxs. M is the number of individual runs.
 
     dset_size : int, default=266
         The overall size of the dataset
@@ -42,21 +91,19 @@ def informativeness_scoring(
     -------
     informativeness : np.ma.array(dset_size, results)
     """
-    scores, idxs = ensure_array(results["scores"]), ensure_array(results["idxs"])
-    scores, idxs = np.atleast_2d(scores), np.atleast_2d(idxs)
+    idxs, scores = ensure_array(idxs), ensure_array(scores)
+    idxs, scores = np.atleast_2d(idxs), np.atleast_2d(scores)
 
     # Re-indexes the indices so that they match the provided subset.
     if subset_idxs is not None:
         idxs = subset_idxs[idxs]
 
-    diffs = np.array([np.diff(score) for score in scores])
-    informativeness = np.zeros((diffs.shape[0], dset_size))
+    informativeness = np.zeros((scores.shape[0], dset_size))
 
-    for run in range(diffs.shape[0]):
-        scaled_diff = diffs[run]
-        if scaler is not None:
-            scaled_diff = scaler(scaled_diff)
-        informativeness[run, idxs[run][seed_size:]] = scaled_diff
+    for i, (idx, score) in enumerate(zip(idxs, scores)):
+        informativeness[i] = index_scores(
+            idx, score, seed_size=seed_size, dset_size=dset_size
+        )
 
     return informativeness
 
@@ -73,13 +120,16 @@ def fold_informativeness(
     subset_idxs=None,
 ):
     """
-    Wrapper function that computes the informativeness over all folds through multiple calls to informativeness_scoring. All parameters are the same, except the following
+    Wrapper function that computes the informativeness over all folds through
+    multiple calls to informativeness_scoring. All parameters are the same,
+    except the following
 
     rep_results {"Fold n" : {strategy : results}}
         The results to be passed
 
     strategy : str, default="Active"
-        The sampling strategy that used used. Used to index the rep_results dictionary provided
+        The sampling strategy that used used. Used to index the rep_results
+        dictionary provided
     """
     informativeness = np.zeros((folds * runs, dset_size))
 
@@ -141,7 +191,8 @@ def strategy_informativeness(
     subset_idxs=None,
 ):
     """
-    Wrapper function that computes the informativeness over all sampling strategies of the data for a given representation.
+    Wrapper function that computes the informativeness over all sampling
+    strategies of the data for a given representation.
     """
     informativeness = np.zeros((len(strategies) * folds * runs, dset_size))
     for idx, strategy in enumerate(strategies.keys()):
@@ -171,6 +222,10 @@ def complete_informativeness(
     seed_size=30,
     subset_idxs=None,
 ):
+    """
+    Computes the informativeness values averaged over all representations and
+    sampling strategies.
+    """
     informativeness = np.zeros(
         (len(kf_results) * len(strategies) * folds * runs, dset_size)
     )

@@ -8,7 +8,11 @@ import chemdataval
 
 from chemdataval.preprocessing import standardise
 from chemdataval.utils import data_stats, kmax, kindices, normalise
-from chemdataval.informativeness_scoring import informativeness_scoring, masked_values
+from chemdataval.informativeness_scoring import (
+    informativeness_scoring,
+    masked_values,
+    index_scores,
+)
 from chemdataval.query_strategy import modify_std
 from chemdataval.testing_functions import fold_testing, active_test, random_test
 
@@ -90,14 +94,26 @@ class TestInformativeness(unittest.TestCase):
             test_func() == np.ma.masked_equal(np.array([1, 2, 0, 3, 4]), 0)
         ), "Masking operation not working correctly."
 
-    def test_informativeness_scoring(self):
+    def test_index_scoring(self):
         idxs = np.array([1, 2, 3, 4, 5, 6])
         scores = np.array([0.1, 0.3, 0.6, 0.5])
-        strategy_results = {"idxs": idxs, "scores": scores}
         desired = np.ma.masked_equal(np.array([0, 0, 0, 0, 0.2, 0.3, -0.1]), 0)
         assert np.allclose(
-            desired, informativeness_scoring(strategy_results, 7, seed_size=3)
+            desired, index_scores(idxs, scores, seed_size=3, dset_size=7)
+        ), "index_scores is not working correctly."
+
+    def test_informativeness_scoring(self):
+        idxs = np.array([[1, 2, 3, 4, 5, 6], [3, 6, 4, 1, 0, 5]])
+        scores = np.array([[0.1, 0.3, 0.6, 0.5], [0.2, 0.4, 0.7, 0.8]])
+        desired = np.ma.masked_equal(
+            np.array([[0, 0, 0, 0, 0.2, 0.3, -0.1], [0.3, 0.2, 0, 0, 0, 0.1, 0]]), 0
         )
+        print(
+            (desired, informativeness_scoring(idxs, scores, seed_size=3, dset_size=7),)
+        )
+        assert np.ma.allclose(
+            desired, informativeness_scoring(idxs, scores, seed_size=3, dset_size=7)
+        ), "informativeness_scoring is not working correctly."
 
 
 class TestQuery(unittest.TestCase):

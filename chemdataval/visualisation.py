@@ -64,7 +64,9 @@ def visualise_learning(results, ax=None, fold=None):
 
 
 def visualise_kf(results, ylim=(0, 1)):
-
+    """
+    Simple wrapper function around visualise learning.
+    """
     fig, axs = fivefigs()
 
     for idx, result in enumerate(results):

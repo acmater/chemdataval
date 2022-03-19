@@ -1,5 +1,6 @@
 import tqdm
 import numpy as np
+import warnings
 
 from modAL.models import ActiveLearner
 from sklearn.gaussian_process import GaussianProcessRegressor
@@ -12,7 +13,6 @@ from .query_strategy import GP_regression_std
 from .utils import kmean_seed
 from .preprocessing import preprocess
 
-import warnings
 
 kernel = RBF(1) + WhiteKernel(noise_level=0.1, noise_level_bounds=(1e-20, 100000.0))
 
