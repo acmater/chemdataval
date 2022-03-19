@@ -6,3 +6,4 @@ from .utils import *
 from .visualisation import *
 from .intelligent_sampling import *
 from .dft_parameterisation import *
+from .explicit_shapley import *
