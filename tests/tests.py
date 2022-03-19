@@ -8,7 +8,7 @@ import chemdataval
 
 from chemdataval.preprocessing import standardise
 from chemdataval.utils import data_stats, kmax, kindices, normalise
-from chemdataval.informativeness_scoring import (
+from chemdataval.informativeness import (
     informativeness_scoring,
     masked_values,
     index_scores,

@@ -79,25 +79,6 @@ def load_obj(name):
     print("File Loaded Successfully")
     return obj
 
-
-def test_model(model, X, Y, train_idx, test_idx, *args, **kwargs):
-    """
-    Generic model testing function
-
-
-    Parameters
-    ----------
-    model : sklearn.MixinRegressor
-
-    """
-    check_invalid_selection(train_idx, test_idx)
-
-    X, Y = preprocess(X, Y, train_idx)
-    model = model(*args, **kwargs)
-    model.fit(X[train_idx], Y[train_idx])
-    return model.score(X[test_idx], Y[test_idx])
-
-
 def make_cov(variance_vector):
     cov = np.zeros((len(variance_vector), len(variance_vector)))
     np.fill_diagonal(cov, variance_vector)

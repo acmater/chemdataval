@@ -8,7 +8,6 @@ from sklearn.gaussian_process.kernels import WhiteKernel, RBF
 from modAL.density import information_density
 from scipy.spatial.distance import cdist
 
-
 from .query_strategy import GP_regression_std
 from .utils import kmean_seed
 from .preprocessing import preprocess

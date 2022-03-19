@@ -1,4 +1,4 @@
-from .informativeness_scoring import *
+from .informativeness import *
 from .preprocessing import *
 from .query_strategy import *
 from .testing_functions import *
