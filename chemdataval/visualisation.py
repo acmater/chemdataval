@@ -258,3 +258,37 @@ def plot_comparison(sizes, informativeness_data, random_data, bad_data=None, ax=
         ax.plot(sizes, bad_data, color="red", label="Uninformative")
 
     return ax
+
+
+def vis_parameterisation(
+    parameterisation_results, strategies, metric="RMSD", scatter=False
+):
+    """
+    Helper function to parameterise the DFT method and visualise the results.
+    """
+
+    fig, axs = fivefigs(shareaxes=False)
+
+    for kf_idx, result in enumerate(parameterisation_results):
+        ax = axs[kf_idx]
+        for idx, strategy in enumerate(strategies.keys()):
+            if scatter:
+                ax.scatter(range(len(result[idx])), result[idx], label=strategy)
+            else:
+                ax.plot(np.mean(result[idx], axis=0), label=strategy)
+                ax.fill_between(
+                    range(len(result[idx][0])),
+                    np.mean(result[idx], axis=0) - np.var(result[idx], axis=0),
+                    np.mean(result[idx], axis=0) + np.var(result[idx], axis=0),
+                    alpha=0.2,
+                )
+
+        ax.legend(frameon=False, fontsize=20, loc="upper right")
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+        ax.tick_params(axis="both", which="major", labelsize=20)
+        ax.set_ylabel(metric, fontsize=24)
+        ax.set_xlabel("Queries", fontsize=24)
+        ax.set_title(f"Fold {kf_idx+1}", fontsize=28)
+
+    return fig

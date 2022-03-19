@@ -4,8 +4,6 @@ from sklearn.cluster import KMeans
 from scipy.cluster.vq import vq
 import pickle
 import scipy.stats as st
-from .preprocessing import preprocess
-import tqdm
 
 default_kernel = RBF(1) + WhiteKernel(
     noise_level=0.1, noise_level_bounds=(1e-20, 100000.0)
@@ -14,7 +12,8 @@ default_kernel = RBF(1) + WhiteKernel(
 
 def data_stats(data, axis=0):
     """
-    Computes the mean and standard deviation of the data provided and returns it.
+    Computes the mean and standard deviation of the data provided and returns
+    it.
     """
     μ = np.mean(data, axis=axis)
     σ = np.sqrt(np.var(data, axis=axis))
@@ -79,6 +78,7 @@ def load_obj(name):
     print("File Loaded Successfully")
     return obj
 
+
 def make_cov(variance_vector):
     cov = np.zeros((len(variance_vector), len(variance_vector)))
     np.fill_diagonal(cov, variance_vector)
@@ -108,7 +108,8 @@ def prob_vec(arr, T=1):
 
 def check_invalid_selection(chosen, holdout):
     """
-    Simpler helper function to compare two sets of indices and ensure that there is no overlap between them.
+    Simpler helper function to compare two sets of indices and ensure that
+    there is no overlap between them.
 
     Parameters
     ----------
@@ -150,7 +151,8 @@ def kmean_seed(X, seed_size, train_index, random_state=0):
     kmean_seed_ = train_index[sub_query]
     i = 1
 
-    # This loop is to ensure that the kmean seed does not contain any duplicates
+    # This loop is to ensure that the kmean seed does not
+    # contain any duplicates
     while len(np.unique(kmean_seed_)) < seed_size:
         kmean_centroid_in_train = (
             KMeans(n_clusters=seed_size + i, random_state=i).fit(X).cluster_centers_
