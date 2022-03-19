@@ -2,13 +2,15 @@ import numpy as np
 
 import unittest
 import numpy as np
-
-from chemdataval.preprocessing import *
-from chemdataval.utils import *
-from chemdataval.informativeness_scoring import *
-from chemdataval.query_strategy import modify_std
 from scipy.spatial.distance import cdist
 
+import chemdataval
+
+from chemdataval.preprocessing import standardise
+from chemdataval.utils import data_stats, kmax, kindices, normalise
+from chemdataval.informativeness_scoring import informativeness_scoring, masked_values
+from chemdataval.query_strategy import modify_std
+from chemdataval.testing_functions import fold_testing, active_test, random_test
 
 test_X = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
 test_Y = np.array([3, 4, 5])

@@ -3,6 +3,11 @@ from .utils import ensure_array
 
 
 def masked_values(func):
+    """
+    Masking decorator that replaces all zero values with a mask from the output
+    of any of the informativeness scoring methods.
+    """
+
     def inner(*args, **kwargs):
         inform = np.ma.masked_equal(func(*args, **kwargs), 0)
         return inform
