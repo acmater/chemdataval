@@ -4,7 +4,7 @@ import math
 from scipy.special import binom
 
 
-class Data_Shapley:
+class Shapley_Values:
     """
     A class that takes a dataset and provides the methods to compute the
     explicit shapley values.
@@ -27,6 +27,9 @@ class Data_Shapley:
 
     @staticmethod
     def generate_datapoint_without_foi(datapoint, feature_of_interest):
+        """
+        Generates a new tuple with the feature of interest removed.
+        """
         new = []
         for val in datapoint:
             if val == feature_of_interest:
@@ -48,6 +51,14 @@ class Data_Shapley:
         return self.data[datapoint] - self.data[new]
 
     def Shapley_Value(self, feature_of_interest):
+        """
+        Computes an individual shapley value for a given feature of interest.
+
+        Parameters
+        ----------
+        feature_of_interest : int
+            The integer identifier of the feature of interest.
+        """
         datapoints_with_foi = []
 
         for datapoint in self.data.keys():
@@ -63,6 +74,18 @@ class Data_Shapley:
 
         return Shapley
 
+    def Shapley_Values(self):
+        """
+        Computes the Shapley values for all features and returns them as a
+        dictionary.
+        """
+        shapley_vals = [self.Shapley_Value(f) for f in range(self.F)]
+        assert np.allclose(
+            np.sum(shapley_vals), self.data[tuple(range(self.F))] - self.data[()]
+        ), "The Shapley values are not summing to the value when all features are present."
+
+        return {f: val for f, val in zip(range(self.F), shapley_vals)}
+
 
 if __name__ == "__main__":
 
@@ -75,7 +98,7 @@ if __name__ == "__main__":
         key: val for key, val in zip(combinations_, [50, 40, 48, 100, 39, 85, 95, 83])
     }
 
-    DS = Data_Shapley(test_example)
+    DS = Shapley_Values()(test_example)
 
     print(DS.MC_value((0,), 0))
     print(DS.Shapley_Value(2))

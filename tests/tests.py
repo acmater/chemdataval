@@ -3,6 +3,7 @@ import numpy as np
 import unittest
 import numpy as np
 from scipy.spatial.distance import cdist
+from itertools import combinations
 
 import chemdataval
 
@@ -15,6 +16,7 @@ from chemdataval.informativeness import (
 )
 from chemdataval.query_strategy import modify_std
 from chemdataval.testing_functions import fold_testing, active_test, random_test
+from chemdataval.explicit_shapley import Shapley_Values
 
 test_X = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
 test_Y = np.array([3, 4, 5])
@@ -213,6 +215,24 @@ class TestQuery(unittest.TestCase):
                 np.array([7, 9, 4]),
             )
         ), "The modify_std method fails with a large batch size."
+
+
+class TestShapley(unittest.TestCase):
+    options = [0, 1, 2]
+    combinations_ = [()]
+    for i in range(1, len(options) + 1):
+        combinations_.extend(list(combinations(options, i)))
+
+    test_example = {
+        key: val for key, val in zip(combinations_, [50, 40, 48, 100, 39, 85, 95, 83])
+    }
+
+    DS = Shapley_Values(test_example)
+
+    def test_value(self):
+        assert np.allclose(
+            self.DS.Shapley_Value(2), 46.6666
+        ), "Data Shapley computation is not working correctly."
 
 
 if __name__ == "__main__":
