@@ -17,6 +17,7 @@ from chemdataval.informativeness import (
 from chemdataval.query_strategy import modify_std
 from chemdataval.testing_functions import fold_testing, active_test, random_test
 from chemdataval.explicit_shapley import Shapley_Values
+from chemdataval.coarse_graining import Coarse_Graining
 
 test_X = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
 test_Y = np.array([3, 4, 5])
@@ -112,10 +113,10 @@ class TestInformativeness(unittest.TestCase):
         )
         print(
             (
-                desired,
+                desired.data,
                 informativeness_scoring(
                     idxs, scores, seed_size=3, dset_size=7, subset_idxs=None
-                ),
+                ).data,
             )
         )
         assert np.ma.allclose(
@@ -233,6 +234,39 @@ class TestShapley(unittest.TestCase):
         assert np.allclose(
             self.DS.Shapley_Value(2), 46.6666
         ), "Data Shapley computation is not working correctly."
+
+
+class TestCoarseGraining(unittest.TestCase):
+    test_X = np.random.randn(16, 5)
+    test_Y = np.random.randn(16,)
+
+    @staticmethod
+    def random_test_func(X, Y, n=1):
+        return np.random.randn() * n
+
+    test = Coarse_Graining(
+        test_X, test_Y, np.arange(12), np.arange(13, 16), random_test_func
+    )
+
+    def test_chunks(self):
+        chunks = self.test.subdivide_data(self.test_X[self.test.current_idxs], 8)
+        assert (
+            len(chunks) == 8
+        ), "subdivide_data function is not splitting into the correct number of chunks."
+        assert len(chunks[0]) == 2, "Each chunk in chunks is not the correct size."
+
+    chunks = test.subdivide_data(test_X[test.current_idxs], 8)
+
+    def test_assign_performance_to_chunk(self):
+        assert np.all(
+            self.test.scores == 0
+        ), "Test scores must be zero at initialisation"
+        self.test.assign_performance_to_chunk(
+            [(self.random_test_func(None, None), chunk) for chunk in self.chunks]
+        )
+        assert np.any(self.test.scores != 0), "Scores should no longer be zero."
+
+    
 
 
 if __name__ == "__main__":

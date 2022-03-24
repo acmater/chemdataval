@@ -8,13 +8,14 @@ class Coarse_Graining:
     Class that takes a dataset and performs the coarse graining algorithm on it.
     """
 
-    def __init__(self, X, Y, test_func):
+    def __init__(self, X, Y, training_idxs, testing_idxs, test_func):
         assert X.shape[0] == Y.shape[0], "X and Y must have the same first dim"
         self.X = X  # All X data to consider
         self.Y = Y  # All Y data to consider
         self.test_func = test_func  # function that will provide assessment
         self.scores = np.zeros((len(self.X),))  # array to store scores
-        self.current_idxs = np.arange(len(X))
+        self.current_idxs = training_idxs
+        self.testing_idxs = testing_idxs
 
     def __str__(self):
         return f"Current set: {self.current_idxs}, {self.scores[self.current_idxs]}"
@@ -26,16 +27,41 @@ class Coarse_Graining:
         Combines all other functionality to execute a coarse graining estimate
         of informativeness by running multiple coarse graining runs with
         an ever decreasing size of current indices.
+
+        Parameters
+        ----------
+        recursive_steps : int
+            The number of recursive steps to break the system down into.
+
+        C : int
+            The number of chunks to break the dataset into
+
+        runs : int
+            How many runs to do for each size
+
+        N : int
+            How many of the chunks to use during a single training run.
+
+        test_func : <func>, default=None
+            The test function used to score each stage of the coarse graining.
+
+        Returns
+        -------
+        self.current_idxs : np.array
+            The indices remaining following the coarse graining.
+
+        self.scores[self.current_idxs] : np.array
+            The scores associated with each index returned.
         """
-        assert (
-            2 ** recursive_steps <= self.X.shape[0]
+        assert 2 ** recursive_steps <= (
+            self.X.shape[0] // C
         ), f"""Too many recursive steps.
-2**recursive_steps must be <= no. of datapoints.
+2**recursive_steps must be <= no. of datapoints * C.
 Instead got {2** recursive_steps} for 2**recursive steps
-and {self.X.shape[0]} for no. of datapoints."""
+and {self.X.shape[0] // C} for no. of datapoints / C."""
 
         for step in range(1, recursive_steps + 1):
-            test.coarse_graining_run(
+            self.coarse_graining_run(
                 C // step, runs, N // step, test_func, *args, **kwargs
             )
 
@@ -60,14 +86,12 @@ and {self.X.shape[0]} for no. of datapoints."""
             The testing function to use during training.
         """
         assert N <= C, "N must be less than or equal to the number of chunks."
-        chunks = test.subdivide_data(self.X[test.current_idxs], C)
+        chunks = self.subdivide_data(self.X[self.current_idxs], C)
 
         if test_func is None:
             test_func = self.test_func
 
-        print(self.scores)
-        self.training_runs(chunks, runs, N, test_func, *args, **kwargs)
-        print(self.scores)
+        self.training_runs(chunks, runs, N, test_func=test_func, *args, **kwargs)
         self.select_next_set()
         return None
 
@@ -85,7 +109,7 @@ and {self.X.shape[0]} for no. of datapoints."""
             The number of chunks that X will be randomly split into.
         """
         assert C <= X.shape[0], "There must be more chunks than datapoints."
-        perm = np.random.permutation(np.arange(len(X)))
+        perm = np.random.permutation(self.current_idxs)
         chunks = np.array_split(perm, C)
         return chunks
 
@@ -126,7 +150,7 @@ and {self.X.shape[0]} for no. of datapoints."""
             The testing function used to assess each chunk. If None, defaults
             to the self.test_func attribute.
         """
-        for run in tqdm.tqdm(range(runs)):
+        for run in tqdm.tqdm(range(runs), position=0, leave=True):
             permutation = np.random.permutation(np.arange(len(chunks)))
             self.train_on_chunks(
                 permutation, chunks, N, test_func=test_func, *args, **kwargs
@@ -166,8 +190,12 @@ and {self.X.shape[0]} for no. of datapoints."""
         scores = []
         for n in range(1, N + 1):
             chunk_idxs = permutation[:n]
-            idxs = np.concatenate(chunks[chunk_idxs])
-            scores.append(test_func(self.X[idxs], self.Y[idxs], *args, **kwargs))
+            idxs = np.concatenate(
+                chunks[chunk_idxs]
+            )  # TODO Add function to ensure that you are not selecting testing indices.
+            scores.append(
+                test_func(self.X, self.Y, idxs, self.testing_idxs, *args, **kwargs)
+            )
         # Compute how useful each chunk was.
         contributions = np.diff(scores)
 
@@ -202,10 +230,7 @@ if __name__ == "__main__":
         return np.random.randn() * n
 
     test = Coarse_Graining(test_X, test_Y, random_test_func)
-    # chunks = test.subdivide_data(test_X[test.current_idxs], 8)
-    # test.assign_performance_to_chunk(
-    #    [(random_test_func(None, None), chunk) for chunk in chunks]
-    # )
+
 
     # print(
     #    test.train_on_chunks(
