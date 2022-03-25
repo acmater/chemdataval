@@ -105,6 +105,8 @@ and {self.X.shape[0] // C} for no. of datapoints / C."""
         assert N <= C, "N must be less than or equal to the number of chunks."
         assert 0 < cull < 1, "cull must be between 0 and 1."
 
+        chunks = self.subdivide_data(self.X[self.current_idxs], C)
+
         if test_func is None:
             test_func = self.test_func
 
