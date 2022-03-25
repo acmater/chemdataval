@@ -21,7 +21,7 @@ class Coarse_Graining:
         return f"Current set: {self.current_idxs}, {self.scores[self.current_idxs]}"
 
     def coarse_graining(
-        self, recursive_steps, C, runs, N, test_func=None, *args, **kwargs
+        self, recursive_steps, C, runs, N, test_func=None, cull=0.5, *args, **kwargs
     ):
         """
         Combines all other functionality to execute a coarse graining estimate
@@ -39,11 +39,15 @@ class Coarse_Graining:
         runs : int
             How many runs to do for each size
 
-        N : int
-            How many of the chunks to use during a single training run.
+        N : 0 < int | float <= C | 1.0
+            How many of the chunks to use during a single training run. If a
+            float is provided then it will be converted to an approach integer.
 
         test_func : <func>, default=None
-            The test function used to score each stage of the coarse graining.
+            The test function used to score each stage of the coarse graining
+
+        cull : float, 0 < default = 0.5 < 1
+            The percentage of chunks to cull at the end of each recursive step.
 
         Returns
         -------
@@ -60,14 +64,24 @@ class Coarse_Graining:
 Instead got {2** recursive_steps} for 2**recursive steps
 and {self.X.shape[0] // C} for no. of datapoints / C."""
 
+        if isinstance(N, float):
+            assert 0 < N <= 1, "If a float, N must be in (0,1]"
+            N = int(C * N)
+        else:
+            assert 0 < N <= C, "If an int, N must be in (0,C]"
+
+        assert 0 < cull < 1, "cull must be between 0 and 1."
+
         for step in range(1, recursive_steps + 1):
             self.coarse_graining_run(
-                C // step, runs, N // step, test_func, *args, **kwargs
+                C // step, runs, N // step, test_func, cull=cull, *args, **kwargs
             )
 
         return self.current_idxs, self.scores[self.current_idxs]
 
-    def coarse_graining_run(self, C, runs, N, test_func=None, *args, **kwargs):
+    def coarse_graining_run(
+        self, C, runs, N, test_func=None, cull=0.5, *args, **kwargs
+    ):
         """
         Performs a single step of coarse graining.
 
@@ -84,14 +98,19 @@ and {self.X.shape[0] // C} for no. of datapoints / C."""
 
         test_func : <func>, default=None
             The testing function to use during training.
+
+        cull : float, 0 < default = 0.5 < 1
+            The percentage of chunks to cull at the end of each recursive step.
         """
         assert N <= C, "N must be less than or equal to the number of chunks."
-        chunks = self.subdivide_data(self.X[self.current_idxs], C)
+        assert 0 < cull < 1, "cull must be between 0 and 1."
 
         if test_func is None:
             test_func = self.test_func
 
-        self.training_runs(chunks, runs, N, test_func=test_func, *args, **kwargs)
+        self.training_runs(
+            chunks, runs, N, test_func=test_func, cull=cull, *args, **kwargs
+        )
         self.select_next_set()
         return None
 
@@ -113,7 +132,7 @@ and {self.X.shape[0] // C} for no. of datapoints / C."""
         chunks = np.array_split(perm, C)
         return chunks
 
-    def select_next_set(self, current_idxs=None):
+    def select_next_set(self, cull=0.5, current_idxs=None):
         """
         Uses the current indices and scores to select the new set from the
         training data.
@@ -123,7 +142,7 @@ and {self.X.shape[0] // C} for no. of datapoints / C."""
 
         # Sort the scores at the current indices and reverse to get descending
         sorted = np.argsort(self.scores[current_idxs])[::-1]
-        new_idxs = sorted[: len(sorted) // 2]
+        new_idxs = sorted[: int(len(sorted) * cull)]
 
         # Override to create the new indices.
         # You need to re-index as you want the indices corresponding to the
@@ -226,11 +245,12 @@ if __name__ == "__main__":
     test_X = np.random.randn(16, 5)
     test_Y = np.random.randn(16,)
 
-    def random_test_func(X, Y, n=1):
+    def random_test_func(X, Y, train_idxs, test_idxs, n=1):
         return np.random.randn() * n
 
-    test = Coarse_Graining(test_X, test_Y, random_test_func)
-
+    test = Coarse_Graining(
+        test_X, test_Y, np.arange(12), np.arange(12, 16), random_test_func
+    )
 
     # print(
     #    test.train_on_chunks(
@@ -258,4 +278,4 @@ if __name__ == "__main__":
     # test.coarse_graining_run(2, 10, 1)
     # print(test)
 
-    print(test.coarse_graining(3, 8, 10, 4))
+    print(test.coarse_graining(3, 2, 10, 0.5))
