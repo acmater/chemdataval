@@ -21,7 +21,17 @@ class Coarse_Graining:
         return f"Current set: {self.current_idxs}, {self.scores[self.current_idxs]}"
 
     def coarse_graining(
-        self, recursive_steps, C, runs, N, test_func=None, cull=0.5, *args, **kwargs
+        self,
+        recursive_steps,
+        C,
+        runs,
+        N,
+        test_func=None,
+        keep=0.5,
+        min_points_in_chunk=50,
+        target="positve",
+        *args,
+        **kwargs,
     ):
         """
         Combines all other functionality to execute a coarse graining estimate
@@ -46,8 +56,14 @@ class Coarse_Graining:
         test_func : <func>, default=None
             The test function used to score each stage of the coarse graining
 
-        cull : float, 0 < default = 0.5 < 1
-            The percentage of chunks to cull at the end of each recursive step.
+        keep : float, 0 < default = 0.5 < 1
+            The percentage of chunks to keep at the end of each recursive step.
+
+        min_points_in_chunk, int, default=50
+            The minimum number of points in each chunk. Purely used in the assertion.
+
+        target : ["positive","negative"], default="positive"
+            Whether or not the target is to increase or decrease the function.
 
         Returns
         -------
@@ -57,30 +73,38 @@ class Coarse_Graining:
         self.scores[self.current_idxs] : np.array
             The scores associated with each index returned.
         """
-        assert 2 ** recursive_steps <= (
-            self.X.shape[0] // C
+        assert ((keep ** recursive_steps) * len(self.current_idxs)) // C >= (
+            min_points_in_chunk
         ), f"""Too many recursive steps.
-2**recursive_steps must be <= no. of datapoints * C.
-Instead got {2** recursive_steps} for 2**recursive steps
-and {self.X.shape[0] // C} for no. of datapoints / C."""
+Results in an individual chunk size of {((keep ** recursive_steps) * self.X.shape[0]) // C}
+and the min_points_in_chunk is set to {min_points_in_chunk}."""
 
         if isinstance(N, float):
-            assert 0 < N <= 1, "If a float, N must be in (0,1]"
+            assert 0 < N <= 1, f"If a float, N must be in (0,1]. Got {N}"
             N = int(C * N)
         else:
-            assert 0 < N <= C, "If an int, N must be in (0,C]"
+            assert 0 < N <= C, f"If an int, N must be in (0,C]. Got {N}"
 
-        assert 0 < cull < 1, "cull must be between 0 and 1."
+        assert 0 < keep < 1, "keep must be between 0 and 1."
 
         for step in range(1, recursive_steps + 1):
             self.coarse_graining_run(
-                C // step, runs, N // step, test_func, cull=cull, *args, **kwargs
+                int(C),
+                runs,
+                int(N),
+                test_func,
+                keep=keep,
+                target=target,
+                *args,
+                **kwargs,
             )
+            C *= keep
+            N *= keep
 
         return self.current_idxs, self.scores[self.current_idxs]
 
     def coarse_graining_run(
-        self, C, runs, N, test_func=None, cull=0.5, *args, **kwargs
+        self, C, runs, N, test_func=None, keep=0.5, target="positive", *args, **kwargs
     ):
         """
         Performs a single step of coarse graining.
@@ -99,21 +123,19 @@ and {self.X.shape[0] // C} for no. of datapoints / C."""
         test_func : <func>, default=None
             The testing function to use during training.
 
-        cull : float, 0 < default = 0.5 < 1
-            The percentage of chunks to cull at the end of each recursive step.
+        keep : float, 0 < default = 0.5 < 1
+            The percentage of chunks to keep at the end of each recursive step.
         """
         assert N <= C, "N must be less than or equal to the number of chunks."
-        assert 0 < cull < 1, "cull must be between 0 and 1."
+        assert 0 < keep < 1, "keep must be between 0 and 1."
 
         chunks = self.subdivide_data(self.X[self.current_idxs], C)
 
         if test_func is None:
             test_func = self.test_func
 
-        self.training_runs(
-            chunks, runs, N, test_func=test_func, cull=cull, *args, **kwargs
-        )
-        self.select_next_set()
+        self.training_runs(chunks, runs, N, test_func=test_func, *args, **kwargs)
+        self.select_next_set(keep=keep, target=target)
         return None
 
     def subdivide_data(self, X, C):
@@ -134,7 +156,7 @@ and {self.X.shape[0] // C} for no. of datapoints / C."""
         chunks = np.array_split(perm, C)
         return chunks
 
-    def select_next_set(self, cull=0.5, current_idxs=None):
+    def select_next_set(self, keep=0.5, target="positive", current_idxs=None):
         """
         Uses the current indices and scores to select the new set from the
         training data.
@@ -143,8 +165,12 @@ and {self.X.shape[0] // C} for no. of datapoints / C."""
             current_idxs = self.current_idxs
 
         # Sort the scores at the current indices and reverse to get descending
-        sorted = np.argsort(self.scores[current_idxs])[::-1]
-        new_idxs = sorted[: int(len(sorted) * cull)]
+        if target is "positive":
+            sorted = np.argsort(self.scores[current_idxs])[::-1]
+        else:
+            sorted = np.argsort(self.scores[current_idxs])
+
+        new_idxs = sorted[: int(len(sorted) * keep)]
 
         # Override to create the new indices.
         # You need to re-index as you want the indices corresponding to the

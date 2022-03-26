@@ -21,7 +21,7 @@ def intelligent_sampling(
     T=10000,
     control=False,
     *args,
-    **kwargs
+    **kwargs,
 ):
     """
     Function to take a machine learning model and pre-computed informativeness
@@ -96,7 +96,6 @@ def intelligent_sampling(
                     # Select only the relevant values of informativeness
                     p=softmax(current_informativeness[train_idxs]),
                 )
-
                 check_invalid_selection(selected_idxs, test_idxs)
                 results_repeats.append(
                     test_func(X, Y, selected_idxs, test_idxs, *args, **kwargs)
@@ -117,10 +116,11 @@ def intelligent_sampling_over_representations(
     repeats=10,
     skip_reps=[],
     T=10000,
+    cross_informativeness=False,
     control=False,
     dset_size=None,
     *args,
-    **kwargs
+    **kwargs,
 ):
     """
     Performs intelligent sampling over a set of representations.
@@ -160,36 +160,71 @@ def intelligent_sampling_over_representations(
 
     T : float, default=10,000
         The temperature term that will scale the probability vector
-    """
 
-    results = {}
+    cross_informativeness : bool, default=False
+        Uses each informativeness value across all representations.
+    """
 
     assert (
         representations.keys() == informativeness_dict.keys()
     ), "The keys in representations and informativeness_dict must be the same."
 
-    for rep in representations.keys():
-        if rep in skip_reps:
-            continue
+    assert not (
+        cross_informativeness == True and control == True
+    ), "Cross informativeness and control cannot both be set to true."
 
-        X = representations[rep]
-        informativeness = informativeness_dict[rep]
-        assert (
-            len(informativeness.shape) == 1
-        ), "informativeness must be 1D at this point."
+    if cross_informativeness:
+        results = {key: {} for key in representations.keys()}
+        for inform_rep in representations.keys():
+            print(f"Using {inform_rep} for informativeness")
+            for X_rep in representations.keys():
+                if X_rep in skip_reps:
+                    continue
 
-        results[rep] = intelligent_sampling(
-            test_func,
-            informativeness,
-            X,
-            Y,
-            train_idxs,
-            test_idxs,
-            sizes,
-            repeats=repeats,
-            T=T,
-            control=control,
-            *args,
-            **kwargs
-        )
+                X = representations[X_rep]
+                informativeness = informativeness_dict[inform_rep]
+                assert (
+                    len(informativeness.shape) == 1
+                ), "informativeness must be 1D at this point."
+
+                results[inform_rep][X_rep] = intelligent_sampling(
+                    test_func,
+                    informativeness,
+                    X,
+                    Y,
+                    train_idxs,
+                    test_idxs,
+                    sizes,
+                    repeats=repeats,
+                    T=T,
+                    control=control,
+                    *args,
+                    **kwargs,
+                )
+    else:
+        results = {}
+        for rep in representations.keys():
+            if rep in skip_reps:
+                continue
+
+            X = representations[rep]
+            informativeness = informativeness_dict[rep]
+            assert (
+                len(informativeness.shape) == 1
+            ), "informativeness must be 1D at this point."
+
+            results[rep] = intelligent_sampling(
+                test_func,
+                informativeness,
+                X,
+                Y,
+                train_idxs,
+                test_idxs,
+                sizes,
+                repeats=repeats,
+                T=T,
+                control=control,
+                *args,
+                **kwargs,
+            )
     return results
