@@ -204,6 +204,7 @@ def intelligent_sampling_over_representations(
     else:
         results = {}
         for rep in representations.keys():
+            print(f"Running {rep}")
             if rep in skip_reps:
                 continue
 

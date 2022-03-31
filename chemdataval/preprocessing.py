@@ -7,8 +7,8 @@ def preprocess(X, Y, train_index, n_components=50):
     """
     Performs complete pre-processing of pca dimensionality reduction followed by standardisation.
     """
-    X = pca_process(X, train_index, n_components)
     X̂, Ŷ = standardise(X, Y, train_index)
+    X̂ = pca_process(X̂, train_index, n_components)
     return X̂, Ŷ
 
 

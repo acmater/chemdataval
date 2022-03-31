@@ -7,7 +7,15 @@ import tqdm
 
 
 def test_model(
-    X, Y, train_idxs, test_idxs, model=None, preprocessing=True, *args, **kwargs
+    X,
+    Y,
+    train_idxs,
+    test_idxs,
+    model=None,
+    preprocessing=True,
+    n_components=50,
+    *args,
+    **kwargs,
 ):
     """
     Generic model testing function
@@ -23,7 +31,7 @@ def test_model(
     check_invalid_selection(train_idxs, test_idxs)
 
     if preprocessing:
-        X, Y = preprocess(X, Y, train_idxs)
+        X, Y = preprocess(X, Y, train_idxs, n_components=n_components)
     model = model(*args, **kwargs)
     model.fit(X[train_idxs], Y[train_idxs])
     return model.score(X[test_idxs], Y[test_idxs])

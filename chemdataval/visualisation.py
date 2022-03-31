@@ -292,3 +292,51 @@ def vis_parameterisation(
         ax.set_title(f"Fold {kf_idx+1}", fontsize=28)
 
     return fig
+
+
+def vis_Ts(T_results, sizes, ax=None, random_result=None, legend=False, fold=None):
+    if ax is None:
+        fig, ax = plt.subplots(1, 1, figsize=(12, 8))
+
+    for idx, item in enumerate(T_results.items()):
+        T, overall_results = item
+
+        ax.plot(
+            sizes,
+            [np.mean(x) for x in overall_results],
+            alpha=1 / (len(T_results) - idx),
+            c="green",
+            label=f"Informativeness",
+        )
+        ax.fill_between(
+            sizes,
+            np.array([np.mean(x) for x in overall_results])
+            - np.array([np.sqrt(np.var(x)) for x in overall_results]),
+            np.array([np.mean(x) for x in overall_results])
+            + np.array([np.var(x) for x in overall_results]),
+            alpha=0.2,
+            color="green",
+        )
+
+    if random_result is not None:
+        ax.plot(sizes, [np.mean(x) for x in random_result], "--", c="k", label="Random")
+        ax.fill_between(
+            sizes,
+            np.array([np.mean(x) for x in random_result])
+            - np.array([np.sqrt(np.var(x)) for x in random_result]),
+            np.array([np.mean(x) for x in random_result])
+            + np.array([np.var(x) for x in random_result]),
+            alpha=0.2,
+            color="k",
+        )
+
+    if legend:
+        ax.legend(frameon=False, fontsize=20, ncol=1)
+    if fold is not None:
+        ax.set_title(f"Fold {fold}", fontsize=32)
+
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.tick_params(axis="both", which="major", labelsize=20)
+
+    return ax

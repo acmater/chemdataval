@@ -268,9 +268,9 @@ class TestCoarseGraining(unittest.TestCase):
 
     def test_cull_value(self):
         with self.assertRaises(AssertionError):
-            self.test.coarse_graining_run(4, 10, 2, cull=0)
+            self.test.coarse_graining_run(4, 10, 2, keep=0)
         with self.assertRaises(AssertionError):
-            self.test.coarse_graining_run(4, 10, 2, cull=1)
+            self.test.coarse_graining_run(4, 10, 2, keep=1)
 
 
 if __name__ == "__main__":

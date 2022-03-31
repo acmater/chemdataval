@@ -73,11 +73,16 @@ class Coarse_Graining:
         self.scores[self.current_idxs] : np.array
             The scores associated with each index returned.
         """
-        assert ((keep ** recursive_steps) * len(self.current_idxs)) // C >= (
+        final_multiplier = np.power(keep, recursive_steps)
+        final_C = C * final_multiplier
+        final_points = len(self.current_idxs) * final_multiplier
+
+        assert final_points / final_C >= (
             min_points_in_chunk
         ), f"""Too many recursive steps.
-Results in an individual chunk size of {((keep ** recursive_steps) * self.X.shape[0]) // C}
-and the min_points_in_chunk is set to {min_points_in_chunk}."""
+        Results in an individual chunk size of {((keep ** recursive_steps) * self.X.shape[0]) // C}
+        and the min_points_in_chunk is set to {min_points_in_chunk}.
+        """
 
         if isinstance(N, float):
             assert 0 < N <= 1, f"If a float, N must be in (0,1]. Got {N}"
@@ -87,7 +92,7 @@ and the min_points_in_chunk is set to {min_points_in_chunk}."""
 
         assert 0 < keep < 1, "keep must be between 0 and 1."
 
-        for step in range(1, recursive_steps + 1):
+        for step in tqdm.tqdm(range(1, recursive_steps + 1), position=0, leave=True):
             self.coarse_graining_run(
                 int(C),
                 runs,
@@ -197,7 +202,7 @@ and the min_points_in_chunk is set to {min_points_in_chunk}."""
             The testing function used to assess each chunk. If None, defaults
             to the self.test_func attribute.
         """
-        for run in tqdm.tqdm(range(runs), position=0, leave=True):
+        for run in range(runs):
             permutation = np.random.permutation(np.arange(len(chunks)))
             self.train_on_chunks(
                 permutation, chunks, N, test_func=test_func, *args, **kwargs
